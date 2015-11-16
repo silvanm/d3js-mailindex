@@ -1,0 +1,214 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans+Condensed:700' rel='stylesheet' type='text/css'>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <style>
+
+        body {
+            background-color: black;
+            color: white;
+            margin: 30px;
+            font-family: 'Open Sans Condensed', sans-serif;
+
+        }
+
+        div.margins {
+            margin-left: 38px
+        }
+
+        h1 {
+            margin-left: 38px;
+        }
+
+        input {
+            color: black
+        }
+
+        .chart circle {
+            opacity: 0.2;
+        }
+
+        .chart g.me circle {
+            fill: red;
+            opacity: 1
+        }
+
+        .chart g.women circle {
+            fill: #ffc0f5;
+        }
+
+        .chart text {
+            fill: white;
+            font: 10px sans-serif;
+            /*text-anchor: ;*/
+        }
+
+        text.caption {
+            display: none
+        }
+
+        .me text.caption {
+            display: block;
+        }
+
+        .axis text {
+            font: 10px sans-serif;
+            fill: white;
+        }
+
+        text.caption {
+            display: none
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: white;
+            shape-rendering: crispEdges;
+        }
+
+        .grid .tick {
+            stroke: lightgrey;
+            opacity: 0.7;
+        }
+
+        .grid path {
+            stroke-width: 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Mails sent by me</h1>
+<svg class="chart"></svg>
+
+<script type="text/javascript">
+    var width = 1400;
+    var height = 800;
+    var margin = {'left': 40, 'right': 60, 'top': 20, 'bottom': 10};
+
+    var x;
+
+    var y = d3.scale.linear()
+            .range([height - margin.top - margin.bottom, margin.top]);
+
+
+    var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient('left')
+            .ticks(12)
+            .tickFormat(function (d) {
+                return (Math.floor(d / 60));
+            })
+
+    var chart = d3.select(".chart")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", "0 0 " + width + " " + height)
+            .append("g")
+            .attr("transform", "translate(" + (margin.left) + ", " + margin.top + ")");
+
+    d3.json("data.json", function (error, rawdata) {
+
+        $("h1").text(rawdata.length + " Emails sent by me")
+        data = rawdata.map(function (d) {
+            return convertFormat(d)
+        });
+
+        x = d3.time.scale()
+                .range([margin.left, width - margin.right - margin.left]);
+        xAxis = d3.svg.axis()
+                .scale(x)
+                .orient('bottom')
+                .tickFormat(d3.time.format('%d.%m.%y'));
+
+        x.domain(
+                d3.extent(data, function (d) {
+                    return d.date;
+                }));
+
+        y.domain(d3.extent(data, function (d) {
+            return d.date.getHours() * 60 + d.date.getMinutes();
+        }))
+
+        dot = chart.selectAll("g")
+                .data(data)
+
+        var g = dot.enter().append("g")
+                .attr("transform", function (d, i) {
+                    return "translate(" + x(d.date) + "," + y(d.date.getHours() * 60 + d.date.getMinutes()) + ")";
+                })
+                .attr("style", function(d) {
+                    return "fill: hsl(" + d.colorcode + ", 100%, 50%)";
+                })
+
+        dot.select('text').text(getLabel)
+
+        dot.exit().remove();
+
+        // The dot
+        g.append('circle')
+                .attr('cy', 0)
+                .attr('cx', 0)
+                .attr("r", 5)
+
+        // The label in the dot
+        g.append("text", "circle")
+                .attr('class', 'caption')
+                .attr("y", 0)
+                .attr("x", 5)
+                .attr("dy", ".35em")
+                .text(getLabel);
+
+        chart.append("g")
+                .attr("class", "x axis x-axis")
+                .call(xAxis)
+                .append("text")
+                .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
+                .attr("y", -15)
+                .attr("dy", ".71em")
+                .style("text-anchor", "center")
+                .text("Date");
+
+        chart.append("g")
+                .attr("class", "y axis y-axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("x", -margin.top + ( +margin.bottom + margin.top - height) / 2)
+                .attr("dy", ".71em")
+                .style("text-anchor", "begin")
+                .text("Hour of day");
+
+
+       /* chart.append("g")
+                .attr("class", "grid")
+                .call(yAxis()
+                        .tickSize(width, 0, 0)
+                        .tickFormat("")
+        )*/
+
+        jQuery("circle").hover(function () {
+            $(this).parent().find('text').fadeIn()
+        }, function () {
+            $(this).parent().find('text').fadeOut()
+        })
+
+
+    });
+
+    function getLabel(d) {
+        return d.to + ", " + d.subject;
+    }
+
+    function convertFormat(d) {
+        d.date = new Date(d.timestamp * 1000);
+
+        return d;
+    }
+
+</script>
+</body>
+</html>
